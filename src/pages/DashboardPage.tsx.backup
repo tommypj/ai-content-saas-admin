@@ -1,0 +1,336 @@
+import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { 
+  Users, 
+  FileText, 
+  DollarSign, 
+  TrendingUp,
+  Activity,
+  AlertCircle,
+  Clock,
+  Zap
+} from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { analyticsService } from '../services/analyticsService';
+import { SystemStats, ChartDataPoint } from '../types';
+import { useDashboardStore } from '../store/ui';
+import { useUIStore } from '../store/ui';
+
+// Mock data for development
+const mockStats: SystemStats = {
+  totalUsers: 1247,
+  activeUsers: 892,
+  newUsersToday: 23,
+  newUsersThisWeek: 156,
+  newUsersThisMonth: 487,
+  totalContentGroups: 3421,
+  totalJobsProcessed: 18937,
+  totalJobsToday: 234,
+  totalJobsThisWeek: 1876,
+  totalJobsThisMonth: 7234,
+  avgJobProcessingTime: 15.6,
+  systemUptime: 99.9,
+  aiTokensUsed: 8230000,
+  aiTokensToday: 45000,
+  aiTokensThisWeek: 324000,
+  aiTokensThisMonth: 1230000,
+  monthlyRevenue: 24500,
+  conversionRate: 3.2,
+  errorRate: 0.8,
+  cpuUsage: 45,
+  memoryUsage: 67,
+  diskUsage: 34
+};
+
+const mockChartData: ChartDataPoint[] = [
+  { date: '2024-01-01', value: 400 },
+  { date: '2024-01-02', value: 300 },
+  { date: '2024-01-03', value: 600 },
+  { date: '2024-01-04', value: 800 },
+  { date: '2024-01-05', value: 700 },
+  { date: '2024-01-06', value: 900 },
+  { date: '2024-01-07', value: 1000 }
+];
+
+const recentActivities = [
+  { id: '1', type: 'user_registered', message: 'New user registration: john@example.com', time: '2 minutes ago', severity: 'info' as const },
+  { id: '2', type: 'content_generated', message: 'Article generated: "React Best Practices"', time: '5 minutes ago', severity: 'success' as const },
+  { id: '3', type: 'error_occurred', message: 'AI service timeout for user ID: 12345', time: '8 minutes ago', severity: 'error' as const },
+  { id: '4', type: 'subscription_changed', message: 'User upgraded to Pro plan: sarah@company.com', time: '12 minutes ago', severity: 'success' as const },
+  { id: '5', type: 'admin_action', message: 'User suspended: spammer@fake.com', time: '15 minutes ago', severity: 'warning' as const }
+];
+
+export default function DashboardPage() {
+  const { setStats, setLoading, setError } = useDashboardStore();
+  const { addNotification } = useUIStore();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Mock query for development - replace with real API call
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ['systemStats', refreshKey],
+    queryFn: async () => {
+      try {
+        const response = await analyticsService.getSystemStats();
+        return response.data;
+      } catch (err: any) {
+        console.error('Failed to fetch real stats, using mock:', err);
+        // Fallback to mock data if API fails
+        return mockStats;
+      }
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const { data: userGrowthData } = useQuery({
+    queryKey: ['userGrowth'],
+    queryFn: async () => mockChartData,
+  });
+
+  const { data: revenueData } = useQuery({
+    queryKey: ['revenueData'],
+    queryFn: async () => mockChartData.map(item => ({ ...item, value: item.value * 25 })),
+  });
+
+  useEffect(() => {
+    setLoading(isLoading);
+    if (error) {
+      setError(error.message);
+    } else if (stats) {
+      setStats(stats);
+      setError(null);
+    }
+  }, [stats, isLoading, error, setStats, setLoading, setError]);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    addNotification({
+      type: 'info',
+      title: 'Refreshing Dashboard',
+      message: 'Updating all metrics...'
+    });
+  };
+
+  const getStatCardColor = (type: string) => {
+    switch (type) {
+      case 'users': return 'border-l-blue-500 bg-blue-50';
+      case 'content': return 'border-l-green-500 bg-green-50';
+      case 'revenue': return 'border-l-purple-500 bg-purple-50';
+      case 'performance': return 'border-l-orange-500 bg-orange-50';
+      default: return 'border-l-gray-500 bg-gray-50';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-admin-900">Dashboard</h1>
+          <div className="animate-pulse bg-admin-200 h-10 w-32 rounded-lg"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="animate-pulse bg-white rounded-xl h-32"></div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="animate-pulse bg-white rounded-xl h-80"></div>
+          <div className="animate-pulse bg-white rounded-xl h-80"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-admin-900">Dashboard</h1>
+          <p className="text-admin-600 mt-1">System overview and key metrics</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="btn-primary flex items-center space-x-2"
+        >
+          <Activity size={16} />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`stat-card border-l-4 ${getStatCardColor('users')}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stat-title">Total Users</p>
+              <p className="stat-value">{stats?.totalUsers.toLocaleString()}</p>
+              <p className="stat-change positive">+{stats?.newUsersThisMonth} this month</p>
+            </div>
+            <Users className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className={`stat-card border-l-4 ${getStatCardColor('content')}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stat-title">Content Generated</p>
+              <p className="stat-value">{stats?.totalContentGroups.toLocaleString()}</p>
+              <p className="stat-change positive">+{stats?.totalJobsThisMonth} jobs this month</p>
+            </div>
+            <FileText className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className={`stat-card border-l-4 ${getStatCardColor('revenue')}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stat-title">Monthly Revenue</p>
+              <p className="stat-value">${stats?.monthlyRevenue.toLocaleString()}</p>
+              <p className="stat-change positive">+{stats?.conversionRate}% conversion</p>
+            </div>
+            <DollarSign className="h-8 w-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className={`stat-card border-l-4 ${getStatCardColor('performance')}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stat-title">System Health</p>
+              <p className="stat-value">{stats?.systemUptime}%</p>
+              <p className="stat-change positive">{stats?.avgJobProcessingTime}s avg response</p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* User Growth Chart */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-admin-900">User Growth</h3>
+            <p className="text-sm text-admin-600">Daily active users over time</p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={userGrowthData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Revenue Chart */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-admin-900">Revenue Trend</h3>
+            <p className="text-sm text-admin-600">Daily revenue over time</p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={revenueData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#10B981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <div className="lg:col-span-2 card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-admin-900">Recent Activity</h3>
+            <p className="text-sm text-admin-600">Latest system events and user actions</p>
+          </div>
+          <div className="space-y-4">
+            {recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg bg-admin-50">
+                <div className={`w-2 h-2 rounded-full mt-2 ${
+                  activity.severity === 'error' ? 'bg-red-500' :
+                  activity.severity === 'warning' ? 'bg-yellow-500' :
+                  activity.severity === 'success' ? 'bg-green-500' :
+                  'bg-blue-500'
+                }`} />
+                <div className="flex-1">
+                  <p className="text-sm text-admin-900">{activity.message}</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Clock size={12} className="text-admin-400" />
+                    <span className="text-xs text-admin-500">{activity.time}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* System Status */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-admin-900">System Status</h3>
+            <p className="text-sm text-admin-600">Current system performance</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-admin-700">CPU Usage</span>
+                <span className="text-sm font-medium text-admin-900">{stats?.cpuUsage}%</span>
+              </div>
+              <div className="w-full bg-admin-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${stats?.cpuUsage && stats.cpuUsage > 80 ? 'bg-red-500' : stats?.cpuUsage && stats.cpuUsage > 60 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                  style={{ width: `${stats?.cpuUsage}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-admin-700">Memory Usage</span>
+                <span className="text-sm font-medium text-admin-900">{stats?.memoryUsage}%</span>
+              </div>
+              <div className="w-full bg-admin-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${stats?.memoryUsage && stats.memoryUsage > 80 ? 'bg-red-500' : stats?.memoryUsage && stats.memoryUsage > 60 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                  style={{ width: `${stats?.memoryUsage}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-admin-700">Disk Usage</span>
+                <span className="text-sm font-medium text-admin-900">{stats?.diskUsage}%</span>
+              </div>
+              <div className="w-full bg-admin-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${stats?.diskUsage && stats.diskUsage > 80 ? 'bg-red-500' : stats?.diskUsage && stats.diskUsage > 60 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                  style={{ width: `${stats?.diskUsage}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-admin-200">
+              <div className="flex items-center space-x-2">
+                <Zap className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-admin-700">All services operational</span>
+              </div>
+              <div className="flex items-center space-x-2 mt-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs text-admin-500">Last updated: just now</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
