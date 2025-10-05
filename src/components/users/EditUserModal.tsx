@@ -113,9 +113,10 @@ export default function EditUserModal({ user, onClose, onSuccess }: Props) {
                     })}
                     className="input"
                   >
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="free">Free (50 jobs, 100K tokens)</option>
+                    <option value="pro">Pro (500 jobs, 1M tokens)</option>
+                    <option value="enterprise">Enterprise (Unlimited)</option>
+                    <option value="dev">Dev (Unlimited - For Development)</option>
                   </select>
                 </div>
                 <div>
@@ -141,7 +142,25 @@ export default function EditUserModal({ user, onClose, onSuccess }: Props) {
 
             {/* Usage Limits */}
             <div>
-              <h3 className="text-lg font-semibold text-admin-900 mb-4">Usage Limits</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-admin-900">Usage Limits</h3>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm('Reset this user\'s monthly usage to zero?')) return;
+                    try {
+                      await adminAPI.resetUserUsage(user._id);
+                      setError('');
+                      alert('Usage reset successfully!');
+                    } catch (err: any) {
+                      setError('Failed to reset usage');
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Reset Monthly Usage
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-admin-900 mb-2">

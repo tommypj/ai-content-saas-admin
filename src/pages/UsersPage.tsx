@@ -176,11 +176,18 @@ export default function UsersPage() {
     const colors = {
       free: 'bg-gray-100 text-gray-800',
       pro: 'bg-blue-100 text-blue-800',
-      enterprise: 'bg-purple-100 text-purple-800'
+      enterprise: 'bg-purple-100 text-purple-800',
+      dev: 'bg-green-100 text-green-800'
+    };
+    const labels = {
+      free: 'FREE',
+      pro: 'PRO',
+      enterprise: 'ENTERPRISE',
+      dev: 'DEV 🚀'
     };
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${colors[plan as keyof typeof colors]}`}>
-        {plan.toUpperCase()}
+        {labels[plan as keyof typeof labels] || plan.toUpperCase()}
       </span>
     );
   };
@@ -267,6 +274,7 @@ export default function UsersPage() {
               <option value="free">Free</option>
               <option value="pro">Pro</option>
               <option value="enterprise">Enterprise</option>
+              <option value="dev">Dev</option>
             </select>
           </div>
 

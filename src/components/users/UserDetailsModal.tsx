@@ -12,6 +12,20 @@ export default function UserDetailsModal({ user, onClose, onEdit }: Props) {
   const [details, setDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Safety check for user prop
+  if (!user || !user._id) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-center">
+          <p className="text-admin-900 mb-4">User data not available</p>
+          <button onClick={onClose} className="btn-primary">
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     fetchDetails();
   }, []);
@@ -20,7 +34,7 @@ export default function UserDetailsModal({ user, onClose, onEdit }: Props) {
     try {
       setLoading(true);
       const response = await adminAPI.getUserDetails(user._id);
-      setDetails(response.data);
+      setDetails(response.data); // response.data is the user object directly
     } catch (error) {
       console.error('Failed to load user details');
     } finally {
@@ -64,32 +78,32 @@ export default function UserDetailsModal({ user, onClose, onEdit }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-admin-600">Username</label>
-                  <p className="text-admin-900 font-medium">{details.user.username}</p>
+                  <p className="text-admin-900 font-medium">{details.username || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-admin-600">Email</label>
-                  <p className="text-admin-900 font-medium">{details.user.email}</p>
+                  <p className="text-admin-900 font-medium">{details.email || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-admin-600">Plan</label>
-                  <p className="text-admin-900 font-medium capitalize">{details.user.subscription.plan}</p>
+                  <p className="text-admin-900 font-medium capitalize">{details.subscription?.plan || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-admin-600">Status</label>
                   <p className="text-admin-900 font-medium">
-                    {details.user.isActive ? 'Active' : 'Suspended'}
+                    {details.isActive ? 'Active' : 'Suspended'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm text-admin-600">Member Since</label>
                   <p className="text-admin-900 font-medium">
-                    {new Date(details.user.createdAt).toLocaleDateString()}
+                    {new Date(details.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm text-admin-600">Last Active</label>
+                  <label className="text-sm text-admin-600">Last Updated</label>
                   <p className="text-admin-900 font-medium">
-                    {new Date(details.user.usageStats.lastActiveAt).toLocaleDateString()}
+                    {new Date(details.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -98,64 +112,83 @@ export default function UserDetailsModal({ user, onClose, onEdit }: Props) {
             {/* Usage Statistics */}
             <div>
               <h3 className="text-lg font-semibold text-admin-900 mb-4">Usage Statistics</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="bg-admin-50 rounded-lg p-4">
-                  <p className="text-sm text-admin-600 mb-1">Content Groups</p>
-                  <p className="text-2xl font-bold text-admin-900">{details.stats.contentGroups}</p>
-                </div>
-                <div className="bg-admin-50 rounded-lg p-4">
-                  <p className="text-sm text-admin-600 mb-1">Jobs Completed</p>
-                  <p className="text-2xl font-bold text-admin-900">{details.stats.jobs.succeeded}</p>
-                </div>
-                <div className="bg-admin-50 rounded-lg p-4">
-                  <p className="text-sm text-admin-600 mb-1">Total Tokens</p>
+                  <p className="text-sm text-admin-600 mb-1">Total Jobs Completed</p>
                   <p className="text-2xl font-bold text-admin-900">
-                    {(details.stats.jobs.totalTokens / 1000).toFixed(1)}K
+                    {details.usageStats?.totalJobsCompleted || 0}
+                  </p>
+                </div>
+                <div className="bg-admin-50 rounded-lg p-4">
+                  <p className="text-sm text-admin-600 mb-1">Total Tokens Used</p>
+                  <p className="text-2xl font-bold text-admin-900">
+                    {((details.usageStats?.totalTokensUsed || 0) / 1000).toFixed(1)}K
+                  </p>
+                </div>
+                <div className="bg-admin-50 rounded-lg p-4">
+                  <p className="text-sm text-admin-600 mb-1">Content Generated</p>
+                  <p className="text-2xl font-bold text-admin-900">
+                    {details.usageStats?.totalContentGenerated || 0}
+                  </p>
+                </div>
+                <div className="bg-admin-50 rounded-lg p-4">
+                  <p className="text-sm text-admin-600 mb-1">Monthly Jobs (Current)</p>
+                  <p className="text-2xl font-bold text-admin-900">
+                    {details.usageStats?.currentMonthUsage?.jobsCompleted || 0}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Usage Limits */}
-            <div>
-              <h3 className="text-lg font-semibold text-admin-900 mb-4">Usage Limits</h3>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-admin-600">Monthly Jobs</span>
-                    <span className="text-admin-900 font-medium">
-                      {details.user.usageStats.currentMonthUsage.jobsCompleted} /{' '}
-                      {details.user.usageStats.planLimits.monthlyJobs}
-                    </span>
+            {details.usageStats?.planLimits && (
+              <div>
+                <h3 className="text-lg font-semibold text-admin-900 mb-4">Usage Limits</h3>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-admin-600">Monthly Jobs</span>
+                      <span className="text-admin-900 font-medium">
+                        {details.usageStats.currentMonthUsage?.jobsCompleted || 0} /{' '}
+                        {details.usageStats.planLimits.monthlyJobs === 999999 ? '∞' : details.usageStats.planLimits.monthlyJobs}
+                      </span>
+                    </div>
+                    <div className="w-full bg-admin-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: details.usageStats.planLimits.monthlyJobs === 999999 
+                            ? '0%'
+                            : `${Math.min(100, ((details.usageStats.currentMonthUsage?.jobsCompleted || 0) / details.usageStats.planLimits.monthlyJobs) * 100)}%`
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-admin-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{
-                        width: `${Math.min(100, (details.user.usageStats.currentMonthUsage.jobsCompleted / details.user.usageStats.planLimits.monthlyJobs) * 100)}%`
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-admin-600">Monthly Tokens</span>
-                    <span className="text-admin-900 font-medium">
-                      {(details.user.usageStats.currentMonthUsage.tokensUsed / 1000).toFixed(1)}K /{' '}
-                      {(details.user.usageStats.planLimits.monthlyTokens / 1000).toFixed(1)}K
-                    </span>
-                  </div>
-                  <div className="w-full bg-admin-200 rounded-full h-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full"
-                      style={{
-                        width: `${Math.min(100, (details.user.usageStats.currentMonthUsage.tokensUsed / details.user.usageStats.planLimits.monthlyTokens) * 100)}%`
-                      }}
-                    />
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-admin-600">Monthly Tokens</span>
+                      <span className="text-admin-900 font-medium">
+                        {((details.usageStats.currentMonthUsage?.tokensUsed || 0) / 1000).toFixed(1)}K /{' '}
+                        {details.usageStats.planLimits.monthlyTokens === 99999999 
+                          ? '∞' 
+                          : `${(details.usageStats.planLimits.monthlyTokens / 1000).toFixed(1)}K`
+                        }
+                      </span>
+                    </div>
+                    <div className="w-full bg-admin-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{
+                          width: details.usageStats.planLimits.monthlyTokens === 99999999
+                            ? '0%'
+                            : `${Math.min(100, ((details.usageStats.currentMonthUsage?.tokensUsed || 0) / details.usageStats.planLimits.monthlyTokens) * 100)}%`
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="p-6 text-center text-admin-600">

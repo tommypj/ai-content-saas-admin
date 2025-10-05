@@ -18,6 +18,7 @@ export const adminAPI = {
   activateUser: (userId: string) => apiService.post(`/admin/users/${userId}/activate`),
   resetUserPassword: (userId: string) => apiService.post(`/admin/users/${userId}/reset-password`),
   updateUserLimits: (userId: string, limits: any) => apiService.put(`/admin/users/${userId}/limits`, limits),
+  resetUserUsage: (userId: string) => apiService.post(`/admin/users/${userId}/reset-usage`),
   deleteUser: (userId: string, confirm: boolean) => apiService.delete(`/admin/users/${userId}`, { data: { confirm } }),
   bulkUserAction: (userIds: string[], action: string, data?: any) => 
     apiService.post('/admin/users/bulk', { userIds, action, data }),
